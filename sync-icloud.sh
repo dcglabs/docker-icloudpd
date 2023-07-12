@@ -1543,10 +1543,10 @@ SyncUser(){
             LogDebug "Switched to icloudpd: $(icloudpd --version | awk '{print $3}')"
             if [ "${photo_album}" ]; then
                if [ "${photo_album}" = "all albums" ]; then
-                  all_albums="$(su "${user}" -c 'icloudpd --username "${0}" --cookie-directory "${1}" --domain "${2}" --directory /dev/null --list-albums | sed "1d"' -- "${apple_id}" "${config_dir}" "${auth_domain}")"
+                  available_albums="$(su "${user}" -c 'icloudpd --username "${0}" --cookie-directory "${1}" --domain "${2}" --directory /dev/null --list-albums | sed "1d"' -- "${apple_id}" "${config_dir}" "${auth_domain}")"
                   albums_to_download=""
                   for available_album in ${available_albums}; do
-                     if [[ ! ${skip_album} =~ ${available_album} ]]; then
+                     if [[ -z "${skip_album}" || ! "${skip_album}" =~ "${available_album}" ]]; then
                         if [ -z "${albums_to_download}" ]; then
                            albums_to_download="${available_album}"
                         else
@@ -1561,8 +1561,8 @@ SyncUser(){
                for album in ${albums_to_download}; do
                   LogInfo "Downloading album: ${album}"
                   if [ "${albums_with_dates}" = true ]; then
-                     LogDebug "iCloudPD launch command: icloudpd ${command_line} --folder-structure ${album}/${older_structure} --album ${album} 2>/tmp/icloudpd/icloudpd_download_error"
-                     su "${user}" -c '(icloudpd ${0} --folder-structure "${1}" --album "${2}" 2>/tmp/icloudpd/icloudpd_download_error; echo $? >/tmp/icloudpd/icloudpd_download_exit_code) | tee /tmp/icloudpd/icloudpd_sync.log' -- "${command_line}" "${album}/${older_structure}" "${album}"
+                     LogDebug "iCloudPD launch command: icloudpd ${command_line} --folder-structure ${album}/${folder_structure} --album ${album} 2>/tmp/icloudpd/icloudpd_download_error"
+                     su "${user}" -c '(icloudpd ${0} --folder-structure "${1}" --album "${2}" 2>/tmp/icloudpd/icloudpd_download_error; echo $? >/tmp/icloudpd/icloudpd_download_exit_code) | tee /tmp/icloudpd/icloudpd_sync.log' -- "${command_line}" "${album}/${folder_structure}" "${album}"
                   else
                      LogDebug "iCloudPD launch command: icloudpd ${command_line} --folder-structure ${album} --album ${album} 2>/tmp/icloudpd/icloudpd_download_error"
                      su "${user}" -c '(icloudpd ${0} --folder-structure "${1}" --album "${1}" 2>/tmp/icloudpd/icloudpd_download_error; echo $? >/tmp/icloudpd/icloudpd_download_exit_code) | tee /tmp/icloudpd/icloudpd_sync.log' -- "${command_line}" "${album}"
@@ -1575,7 +1575,7 @@ SyncUser(){
                   fi
                done
                IFS="${save_ifs}"
-               folder_structure="${older_structure}"
+               folder_structure="${folder_structure}"
             else
                LogDebug "iCloudPD launch command: icloudpd ${command_line} 2>/tmp/icloudpd/icloudpd_download_error"
                if [ "${skip_download}" = false ]; then
